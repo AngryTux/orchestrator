@@ -151,6 +151,7 @@ WatchdogSec=30
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=read-only
+ReadWritePaths=$DATA_DIR
 PrivateTmp=yes
 ProtectKernelTunables=yes
 ProtectControlGroups=yes
@@ -176,7 +177,8 @@ if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
     warn "  export PATH=\"$INSTALL_DIR:\$PATH\""
 fi
 
-VERSION=$("$INSTALL_DIR/orch" version 2>/dev/null || echo "unknown")
+# Read version from Cargo.toml instead of querying daemon
+VERSION=$(grep '^version' "$BUILD_DIR/orchestrator/Cargo.toml" | head -1 | cut -d'"' -f2 2>/dev/null || echo "unknown")
 
 echo ""
 printf "${GREEN}════════════════════════════════════════${NC}\n"

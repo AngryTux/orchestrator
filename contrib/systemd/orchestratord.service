@@ -13,6 +13,7 @@ WatchdogSec=30
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=read-only
+ReadWritePaths=%h/.local/share/orchestrator
 PrivateTmp=yes
 ProtectKernelTunables=yes
 ProtectControlGroups=yes
