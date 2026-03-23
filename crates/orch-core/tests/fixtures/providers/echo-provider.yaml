@@ -1,0 +1,14 @@
+kind: Provider
+version: 1
+metadata:
+  name: echo
+  display_name: "Echo Provider (test)"
+  description: "Echoes the prompt back. Used for integration testing."
+detection:
+  binary: echo-provider
+invocation:
+  cmd: ["__BINARY_PATH__"]
+  prompt_flag: "-p"
+auth:
+  env_var: "ECHO_API_KEY"
+  methods: [env]

@@ -6,7 +6,7 @@ Secure LLM workspace manager and orchestrator. Run AI providers in isolated sand
 
 - **Isolated execution** — Every provider runs in a sandboxed process with Landlock, seccomp, rlimits, and clean environment
 - **Credential management** — API keys encrypted with AES-256-GCM, scoped per namespace
-- **Multi-formation** — Solo (single provider) and Duet (parallel + consolidation). Quartet, Chamber, Symphonic planned
+- **Multi-formation** — Solo (single provider) and Duet (parallel + consolidation). Quartet, Chamber, Symphonic coming in Act II
 - **Metrics** — SQLite-backed history of every performance: tokens, cost, duration
 - **Namespaces** — Isolated contexts (default, secure, lab) with independent credentials and configs
 
@@ -19,11 +19,20 @@ Secure LLM workspace manager and orchestrator. Run AI providers in isolated sand
 ## Quick start
 
 ```bash
+# Build
 make build
+
+# Run tests
 make test
-make check       # fmt + lint + audit + tests
-make run          # start daemon
-make smoke        # end-to-end with mock provider
+
+# Full CI check (fmt + lint + audit + tests)
+make check
+
+# Start daemon
+make run
+
+# Smoke test (end-to-end with mock provider)
+make smoke
 ```
 
 ## Usage
@@ -69,7 +78,7 @@ GET  /v1/metrics                                Aggregate metrics
 crates/
   orch-core/       Core library (contracts, engine, isolation, credentials, metrics)
   orchestratord/   Daemon binary (systemd socket activation, HTTP API)
-  orch/            CLI binary
+  orch/            CLI binary (Act I)
 
 contrib/systemd/   systemd user units
 repertoire/        Provider specs (YAML)

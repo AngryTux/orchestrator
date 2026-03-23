@@ -1,0 +1,14 @@
+kind: Provider
+version: 1
+metadata:
+  name: slow
+  display_name: "Slow Provider (test)"
+  description: "Responds after a delay. Tests timeout handling."
+detection:
+  binary: slow-provider
+invocation:
+  cmd: ["__BINARY_PATH__"]
+  prompt_flag: "-p"
+auth:
+  env_var: "SLOW_API_KEY"
+  methods: [env]

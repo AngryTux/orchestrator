@@ -1,0 +1,24 @@
+[Unit]
+Description=Orchestrator daemon — secure LLM workspace manager
+After=network.target
+Requires=orchestratord.socket
+
+[Service]
+Type=notify
+ExecStart=%h/.cargo/bin/orchestratord
+NotifyAccess=main
+WatchdogSec=30
+
+# Hardening (daemon protects itself too, but defense in depth)
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictNamespaces=~net
+RestrictSUIDSGID=yes
+MemoryDenyWriteExecute=yes
+
+[Install]
+WantedBy=default.target

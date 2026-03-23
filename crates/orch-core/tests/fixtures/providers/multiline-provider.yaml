@@ -1,0 +1,15 @@
+kind: Provider
+version: 1
+metadata:
+  name: multiline
+  display_name: "Multiline Provider (test)"
+  description: "Returns a multi-line response. Tests output capture."
+detection:
+  binary: multiline-provider
+invocation:
+  cmd: ["__BINARY_PATH__"]
+  prompt_flag: "-p"
+  extra_flags: ["--verbose"]
+auth:
+  env_var: "MULTI_API_KEY"
+  methods: [env]

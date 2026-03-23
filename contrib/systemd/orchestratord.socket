@@ -1,0 +1,10 @@
+[Unit]
+Description=Orchestrator daemon socket
+
+[Socket]
+ListenStream=%t/orchestrator/orchestrator.sock
+SocketMode=0600
+DirectoryMode=0700
+
+[Install]
+WantedBy=sockets.target

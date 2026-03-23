@@ -1,0 +1,14 @@
+kind: Provider
+version: 1
+metadata:
+  name: env-check
+  display_name: "Env Check Provider (test)"
+  description: "Prints injected env vars. Used for credential injection testing."
+detection:
+  binary: env-check-provider
+invocation:
+  cmd: ["__BINARY_PATH__"]
+  prompt_flag: "-p"
+auth:
+  env_var: "ENVCHECK_API_KEY"
+  methods: [env]

@@ -1,0 +1,28 @@
+[package]
+name = "orchestratord"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Orchestrator daemon — secure LLM workspace manager"
+
+[[bin]]
+name = "orchestratord"
+path = "src/main.rs"
+
+[dependencies]
+orch-core = { path = "../orch-core" }
+tokio = { workspace = true }
+axum = { workspace = true }
+hyper = { workspace = true }
+hyper-util = { workspace = true }
+tower = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sd-notify = { workspace = true }
+serde_yaml = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

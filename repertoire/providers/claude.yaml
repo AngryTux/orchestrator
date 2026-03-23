@@ -1,0 +1,25 @@
+kind: Provider
+version: 1
+metadata:
+  name: claude
+  display_name: "Claude (Anthropic)"
+  url: "https://docs.anthropic.com/en/docs/claude-code"
+detection:
+  binary: claude
+  version_cmd: ["claude", "--version"]
+  auth_paths: ["~/.claude/"]
+invocation:
+  cmd: ["claude", "--print"]
+  prompt_flag: "-p"
+  model_flag: "--model"
+  system_prompt_flag: "--system-prompt"
+  json_schema_flag: "--json-schema"
+  output_format_flag: ["--output-format", "json"]
+  extra_flags: ["--no-session-persistence"]
+auth:
+  env_var: "ANTHROPIC_API_KEY"
+  methods: [detect, env, input]
+install:
+  hint: "https://docs.anthropic.com/en/docs/claude-code"
+  commands:
+    linux: ["curl -fsSL https://docs.anthropic.com/install.sh | sh"]

@@ -1,0 +1,14 @@
+kind: Provider
+version: 1
+metadata:
+  name: failing
+  display_name: "Failing Provider (test)"
+  description: "Always fails with an error. Used for error path testing."
+detection:
+  binary: failing-provider
+invocation:
+  cmd: ["__BINARY_PATH__"]
+  prompt_flag: "-p"
+auth:
+  env_var: "FAILING_API_KEY"
+  methods: [env]
