@@ -50,6 +50,8 @@ enum Command {
     /// Manage namespaces
     #[command(subcommand)]
     Namespace(NamespaceCommand),
+    /// Update orchestrator to latest version
+    Update,
 }
 
 #[derive(Subcommand)]
@@ -408,7 +410,80 @@ async fn main() -> Result<()> {
                 println!("✓ Namespace '{name}' deleted");
             }
         },
+
+        Command::Update => {
+            update_self()?;
+        }
     }
+
+    Ok(())
+}
+
+fn update_self() -> Result<()> {
+    use std::process::Command as Cmd;
+
+    let repo = "https://github.com/AngryTux/orchestrator.git";
+    let install_dir = format!("{}/.local/bin", std::env::var("HOME")?);
+
+    println!("→ Updating orchestrator...");
+
+    // Clone to temp dir
+    let tmp = std::env::temp_dir().join(format!("orch-update-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&tmp);
+
+    let status = Cmd::new("git")
+        .args(["clone", "--depth", "1", repo])
+        .arg(&tmp)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()?;
+    if !status.success() {
+        let _ = std::fs::remove_dir_all(&tmp);
+        return Err(anyhow!("failed to download source"));
+    }
+    println!("✓ Source downloaded");
+
+    // Build
+    println!("→ Building...");
+    let status = Cmd::new("cargo")
+        .args(["build", "--release"])
+        .current_dir(&tmp)
+        .status()?;
+    if !status.success() {
+        let _ = std::fs::remove_dir_all(&tmp);
+        return Err(anyhow!("build failed"));
+    }
+    println!("✓ Build complete");
+
+    // Install
+    let src_daemon = tmp.join("target/release/orchestratord");
+    let src_cli = tmp.join("target/release/orch");
+    let dst_daemon = format!("{install_dir}/orchestratord");
+    let dst_cli = format!("{install_dir}/orch");
+
+    std::fs::copy(&src_daemon, &dst_daemon)?;
+    std::fs::copy(&src_cli, &dst_cli)?;
+    println!("✓ Binaries installed to {install_dir}");
+
+    // Restart daemon if systemd is available
+    let restart = Cmd::new("systemctl")
+        .args(["--user", "restart", "orchestratord.socket"])
+        .status();
+    if restart.is_ok_and(|s| s.success()) {
+        println!("✓ Daemon restarted");
+    }
+
+    // Cleanup
+    let _ = std::fs::remove_dir_all(&tmp);
+
+    // Show new version
+    let version = Cmd::new(&dst_cli)
+        .args(["--version"])
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .unwrap_or_else(|| "unknown".into());
+    println!("\n✓ Updated to {}", version.trim());
 
     Ok(())
 }
