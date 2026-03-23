@@ -16,6 +16,36 @@ ok()      { echo "✅ $1"; }
 warn()    { echo "⚠️  $1"; }
 fail()    { echo "❌ $1" >&2; exit 1; }
 
+# Spinner — runs a command with an animated progress indicator
+# Usage: spin "message" command arg1 arg2 ...
+spin() {
+    local msg="$1"; shift
+    local frames='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local pid
+
+    "$@" >/dev/null 2>&1 &
+    pid=$!
+
+    while kill -0 "$pid" 2>/dev/null; do
+        for (( i=0; i<${#frames}; i++ )); do
+            printf "\r  ${frames:$i:1} %s" "$msg" >&2
+            sleep 0.08
+        done
+    done
+
+    wait "$pid"
+    local exit_code=$?
+    printf "\r%-60s\r" "" >&2
+
+    if [ $exit_code -eq 0 ]; then
+        ok "$msg"
+    else
+        fail "$msg"
+    fi
+
+    return $exit_code
+}
+
 # ─── Banner ──────────────────────────────────────────────
 cat << "BANNER"
 
@@ -84,23 +114,17 @@ download_source() {
     BUILD_DIR=$(mktemp -d)
     trap 'rm -rf "$BUILD_DIR"' EXIT
 
-    info "Downloading source from $REPO_URL..."
-    git clone --depth 1 "$REPO_URL.git" "$BUILD_DIR/orchestrator" >/dev/null 2>&1
+    spin "Downloading source..." git clone --depth 1 "$REPO_URL.git" "$BUILD_DIR/orchestrator"
     [ -d "$BUILD_DIR/orchestrator" ] || fail "Download failed"
-    ok "Source downloaded"
 }
 
 # ─── Build ───────────────────────────────────────────────
 build_release() {
-    info "Building release binaries. This may take a few minutes..."
     cd "$BUILD_DIR/orchestrator"
-
-    cargo build --release || fail "Build failed"
+    spin "Building release binaries (this may take a few minutes)..." cargo build --release
 
     [ -f target/release/orchestratord ] || fail "orchestratord binary not found"
     [ -f target/release/orch ] || fail "orch binary not found"
-
-    ok "Build complete"
 }
 
 # ─── Install binaries ────────────────────────────────────
