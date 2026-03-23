@@ -37,7 +37,10 @@ fn parse_provider_spec() {
     assert_eq!(spec.kind, "Provider");
     assert_eq!(spec.version, 1);
     assert_eq!(spec.metadata.name, "claude");
-    assert_eq!(spec.metadata.display_name.as_deref(), Some("Claude (Anthropic)"));
+    assert_eq!(
+        spec.metadata.display_name.as_deref(),
+        Some("Claude (Anthropic)")
+    );
     assert_eq!(spec.detection.binary, "claude");
     assert_eq!(spec.invocation.prompt_flag, "-p");
     assert_eq!(spec.auth.env_var, "ANTHROPIC_API_KEY");
@@ -248,7 +251,10 @@ fn parse_sandbox_isolation_profile() {
 
     let ll = spec.landlock.unwrap();
     assert!(ll.filesystem.unwrap().enabled);
-    assert_eq!(ll.network.as_ref().unwrap().tcp_bind.as_deref(), Some("deny"));
+    assert_eq!(
+        ll.network.as_ref().unwrap().tcp_bind.as_deref(),
+        Some("deny")
+    );
 
     let cg = spec.cgroup.unwrap();
     assert_eq!(cg.memory.as_deref(), Some("512M"));
@@ -318,7 +324,10 @@ auth:
     let repertoire = Repertoire::new(dir.join("custom"), dir.join("repertoire"));
 
     let spec = repertoire.load_provider("claude").unwrap();
-    assert_eq!(spec.metadata.display_name.as_deref(), Some("My Custom Claude"));
+    assert_eq!(
+        spec.metadata.display_name.as_deref(),
+        Some("My Custom Claude")
+    );
 }
 
 #[test]

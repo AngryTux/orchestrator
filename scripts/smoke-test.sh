@@ -10,7 +10,7 @@ set -euo pipefail
 # ─── Config ───────────────────────────────────────────────
 TEST_DIR=$(mktemp -d /tmp/orch-smoke-XXXXXX)
 SOCKET="$TEST_DIR/run/orchestrator/orchestrator.sock"
-DATA_DIR="$TEST_DIR/data"
+DATA_DIR="$TEST_DIR/orchestrator"
 MOCK_BINARY="$TEST_DIR/mock-provider"
 
 cleanup() {
@@ -74,7 +74,7 @@ echo "[4/6] Starting daemon..."
 mkdir -p "$TEST_DIR/run"
 XDG_RUNTIME_DIR="$TEST_DIR/run" \
 XDG_DATA_HOME="$TEST_DIR" \
-RUST_LOG=info \
+RUST_LOG=info,orchestratord=info \
     ./target/debug/orchestratord &
 DAEMON_PID=$!
 

@@ -65,11 +65,7 @@ fn discover_specs() -> Vec<(String, PathBuf)> {
         let entry = entry.unwrap();
         let path = entry.path();
         if path.extension().is_some_and(|e| e == "yaml") {
-            let name = path
-                .file_stem()
-                .unwrap()
-                .to_string_lossy()
-                .to_string();
+            let name = path.file_stem().unwrap().to_string_lossy().to_string();
             specs.push((name, path));
         }
     }
@@ -112,11 +108,17 @@ async fn ping_pong_all_provider_specs() {
             .store("default", &spec.metadata.name, "ping-pong-key")
             .unwrap();
 
-        let engine = PerformanceEngine::new(Arc::new(
-            CredentialStore::open(cred_dir.clone()).unwrap(),
-        ));
+        let engine =
+            PerformanceEngine::new(Arc::new(CredentialStore::open(cred_dir.clone()).unwrap()));
 
-        let result = engine.perform("default", "ping", &spec, orch_core::contracts::FormationType::Solo).await;
+        let result = engine
+            .perform(
+                "default",
+                "ping",
+                &spec,
+                orch_core::contracts::FormationType::Solo,
+            )
+            .await;
 
         match result {
             Ok(coda) => {
@@ -204,14 +206,19 @@ async fn all_specs_produce_solo_formation() {
 
         let binary = create_pong_binary(&dir, name);
         let spec = load_spec(yaml_path, &binary);
-        store
-            .store("default", &spec.metadata.name, "key")
-            .unwrap();
+        store.store("default", &spec.metadata.name, "key").unwrap();
 
-        let engine = PerformanceEngine::new(Arc::new(
-            CredentialStore::open(cred_dir.clone()).unwrap(),
-        ));
-        let coda = engine.perform("default", "test", &spec, orch_core::contracts::FormationType::Solo).await.unwrap();
+        let engine =
+            PerformanceEngine::new(Arc::new(CredentialStore::open(cred_dir.clone()).unwrap()));
+        let coda = engine
+            .perform(
+                "default",
+                "test",
+                &spec,
+                orch_core::contracts::FormationType::Solo,
+            )
+            .await
+            .unwrap();
 
         assert_eq!(
             coda.formation,
@@ -219,7 +226,12 @@ async fn all_specs_produce_solo_formation() {
             "spec {name} produced {:?} instead of Solo",
             coda.formation
         );
-        assert_eq!(coda.sections.len(), 1, "spec {name} has {} sections", coda.sections.len());
+        assert_eq!(
+            coda.sections.len(),
+            1,
+            "spec {name} has {} sections",
+            coda.sections.len()
+        );
     }
 
     let _ = std::fs::remove_dir_all(&dir);

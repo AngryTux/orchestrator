@@ -65,11 +65,7 @@ fn discover_real_providers() {
         let binary = &spec.detection.binary;
         match find_in_path(binary) {
             Some(path) => {
-                println!(
-                    "  {:<20} FOUND    {}",
-                    spec.metadata.name,
-                    path.display()
-                );
+                println!("  {:<20} FOUND    {}", spec.metadata.name, path.display());
                 found += 1;
             }
             None => {
@@ -147,7 +143,11 @@ fn installed_providers_respond_to_version_cmd() {
     }
 
     println!("  {:-<55}", "");
-    println!("  {} tested, {} failed\n", tested + failures.len(), failures.len());
+    println!(
+        "  {} tested, {} failed\n",
+        tested + failures.len(),
+        failures.len()
+    );
 
     // A provider that IS installed but fails --version is a real problem
     assert!(
@@ -167,13 +167,41 @@ fn repertoire_specs_have_required_fields() {
 
     for spec in &specs {
         assert!(!spec.metadata.name.is_empty(), "spec missing name");
-        assert!(!spec.detection.binary.is_empty(), "spec {} missing detection.binary", spec.metadata.name);
-        assert!(!spec.invocation.cmd.is_empty(), "spec {} missing invocation.cmd", spec.metadata.name);
-        assert!(!spec.invocation.prompt_flag.is_empty(), "spec {} missing invocation.prompt_flag", spec.metadata.name);
-        assert!(!spec.auth.env_var.is_empty(), "spec {} missing auth.env_var", spec.metadata.name);
-        assert!(!spec.auth.methods.is_empty(), "spec {} missing auth.methods", spec.metadata.name);
-        assert_eq!(spec.kind, "Provider", "spec {} has wrong kind: {}", spec.metadata.name, spec.kind);
-        assert!(spec.version > 0, "spec {} has version 0", spec.metadata.name);
+        assert!(
+            !spec.detection.binary.is_empty(),
+            "spec {} missing detection.binary",
+            spec.metadata.name
+        );
+        assert!(
+            !spec.invocation.cmd.is_empty(),
+            "spec {} missing invocation.cmd",
+            spec.metadata.name
+        );
+        assert!(
+            !spec.invocation.prompt_flag.is_empty(),
+            "spec {} missing invocation.prompt_flag",
+            spec.metadata.name
+        );
+        assert!(
+            !spec.auth.env_var.is_empty(),
+            "spec {} missing auth.env_var",
+            spec.metadata.name
+        );
+        assert!(
+            !spec.auth.methods.is_empty(),
+            "spec {} missing auth.methods",
+            spec.metadata.name
+        );
+        assert_eq!(
+            spec.kind, "Provider",
+            "spec {} has wrong kind: {}",
+            spec.metadata.name, spec.kind
+        );
+        assert!(
+            spec.version > 0,
+            "spec {} has version 0",
+            spec.metadata.name
+        );
     }
 }
 
@@ -190,9 +218,7 @@ fn repertoire_specs_have_required_fields() {
 #[tokio::test]
 async fn real_cli_ping_pong() {
     if std::env::var("ORCH_TEST_REAL_PROVIDERS").is_err() {
-        println!(
-            "\n  Skipping real CLI test (set ORCH_TEST_REAL_PROVIDERS=1 to enable)\n"
-        );
+        println!("\n  Skipping real CLI test (set ORCH_TEST_REAL_PROVIDERS=1 to enable)\n");
         return;
     }
 

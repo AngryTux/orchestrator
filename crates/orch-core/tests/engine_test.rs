@@ -89,7 +89,12 @@ async fn solo_performance_returns_coda() {
 
     let engine = PerformanceEngine::new(Arc::new(store));
     let coda = engine
-        .perform("default", "what is CQRS?", &spec, orch_core::contracts::FormationType::Solo)
+        .perform(
+            "default",
+            "what is CQRS?",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
         .await
         .unwrap();
 
@@ -117,7 +122,15 @@ async fn solo_performance_captures_provider_name() {
     store.store("default", "mock", "key").unwrap();
 
     let engine = PerformanceEngine::new(Arc::new(store));
-    let coda = engine.perform("default", "test", &spec, orch_core::contracts::FormationType::Solo).await.unwrap();
+    let coda = engine
+        .perform(
+            "default",
+            "test",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(coda.sections[0].provider, "mock");
 
@@ -130,11 +143,7 @@ async fn solo_performance_injects_credential() {
     let dir = temp_dir("cred-inject");
     // Provider that prints the env var value
     let binary = dir.join("env-provider");
-    std::fs::write(
-        &binary,
-        "#!/bin/sh\necho \"key=$MOCK_API_KEY\"\n",
-    )
-    .unwrap();
+    std::fs::write(&binary, "#!/bin/sh\necho \"key=$MOCK_API_KEY\"\n").unwrap();
     std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755)).unwrap();
 
     let mut spec = mock_provider(&dir).1;
@@ -145,7 +154,15 @@ async fn solo_performance_injects_credential() {
     store.store("default", "mock", "sk-secret-456").unwrap();
 
     let engine = PerformanceEngine::new(Arc::new(store));
-    let coda = engine.perform("default", "test", &spec, orch_core::contracts::FormationType::Solo).await.unwrap();
+    let coda = engine
+        .perform(
+            "default",
+            "test",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await
+        .unwrap();
 
     assert!(
         coda.summary.contains("key=sk-secret-456"),
@@ -171,7 +188,14 @@ async fn solo_performance_fails_without_credential() {
     // NOT storing any credential for "mock"
 
     let engine = PerformanceEngine::new(Arc::new(store));
-    let result = engine.perform("default", "test", &spec, orch_core::contracts::FormationType::Solo).await;
+    let result = engine
+        .perform(
+            "default",
+            "test",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await;
 
     assert!(result.is_err());
 
@@ -198,10 +222,21 @@ async fn solo_performance_captures_provider_failure() {
     store.store("default", "mock", "key").unwrap();
 
     let engine = PerformanceEngine::new(Arc::new(store));
-    let coda = engine.perform("default", "test", &spec, orch_core::contracts::FormationType::Solo).await.unwrap();
+    let coda = engine
+        .perform(
+            "default",
+            "test",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await
+        .unwrap();
 
     assert!(!coda.sections[0].success);
-    assert_eq!(coda.sections[0].error.as_deref(), Some("rate limit exceeded"));
+    assert_eq!(
+        coda.sections[0].error.as_deref(),
+        Some("rate limit exceeded")
+    );
 
     let _ = std::fs::remove_dir_all(&dir);
     let _ = std::fs::remove_dir_all(&cred_dir);
@@ -221,8 +256,24 @@ async fn solo_performance_generates_unique_ids() {
     store.store("default", "mock", "key").unwrap();
 
     let engine = PerformanceEngine::new(Arc::new(store));
-    let coda1 = engine.perform("default", "test1", &spec, orch_core::contracts::FormationType::Solo).await.unwrap();
-    let coda2 = engine.perform("default", "test2", &spec, orch_core::contracts::FormationType::Solo).await.unwrap();
+    let coda1 = engine
+        .perform(
+            "default",
+            "test1",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await
+        .unwrap();
+    let coda2 = engine
+        .perform(
+            "default",
+            "test2",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await
+        .unwrap();
 
     assert_ne!(coda1.performance_id, coda2.performance_id);
     assert!(coda1.performance_id.starts_with("perf-"));

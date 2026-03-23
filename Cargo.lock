@@ -707,7 +707,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "orch-core",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
  "serde",
  "serde_json",
  "tokio",

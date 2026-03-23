@@ -96,7 +96,11 @@ async fn rlimits_are_applied() {
     assert_eq!(lines[0], "100", "NPROC not set correctly");
     // ulimit -v reports in KB
     let expected_kb = 512 * 1024;
-    assert_eq!(lines[1], expected_kb.to_string(), "virtual memory limit not set");
+    assert_eq!(
+        lines[1],
+        expected_kb.to_string(),
+        "virtual memory limit not set"
+    );
 }
 
 #[tokio::test]

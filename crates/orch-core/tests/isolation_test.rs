@@ -76,7 +76,12 @@ async fn spawn_clean_environment() {
 
     assert_eq!(result.exit_code, 0);
     let lines: Vec<&str> = result.stdout.lines().collect();
-    assert_eq!(lines.len(), 1, "expected exactly 1 env var, got: {:?}", lines);
+    assert_eq!(
+        lines.len(),
+        1,
+        "expected exactly 1 env var, got: {:?}",
+        lines
+    );
     assert_eq!(lines[0], "MY_VAR=my_value");
 }
 
@@ -188,10 +193,7 @@ async fn landlock_allows_write_to_authorized_dir() {
 
     let result = spawn(&SpawnConfig {
         binary: "/bin/sh".into(),
-        args: vec![
-            "-c".into(),
-            format!("echo result > {}", out_file.display()),
-        ],
+        args: vec!["-c".into(), format!("echo result > {}", out_file.display())],
         read_paths: vec![read_dir.clone()],
         write_paths: vec![write_dir.clone()],
         enable_landlock: true,
@@ -230,7 +232,10 @@ async fn landlock_blocks_write_to_unauthorized_dir() {
     .await
     .unwrap();
 
-    assert_ne!(result.exit_code, 0, "writing to unauthorized path must fail");
+    assert_ne!(
+        result.exit_code, 0,
+        "writing to unauthorized path must fail"
+    );
     assert!(
         !blocked_dir.join("evil.txt").exists(),
         "file must not be created"
@@ -284,7 +289,10 @@ async fn spawn_timeout_kills_long_running_process() {
 
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();
-    assert!(err.contains("timed out"), "expected timeout error, got: {err}");
+    assert!(
+        err.contains("timed out"),
+        "expected timeout error, got: {err}"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════

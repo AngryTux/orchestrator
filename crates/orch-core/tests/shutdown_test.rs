@@ -111,7 +111,10 @@ async fn no_new_connections_after_shutdown() {
 
     // New connection should fail — server is gone
     let result = UnixStream::connect(&path).await;
-    assert!(result.is_err(), "connection should be refused after shutdown");
+    assert!(
+        result.is_err(),
+        "connection should be refused after shutdown"
+    );
 
     let _ = std::fs::remove_file(&path);
 }

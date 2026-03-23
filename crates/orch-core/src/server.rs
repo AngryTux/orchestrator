@@ -188,8 +188,14 @@ pub fn app(state: AppState) -> Router {
             "/v1/namespaces/{ns}/providers",
             post(add_provider).get(list_providers),
         )
-        .route("/v1/namespaces/{ns}/performances", post(perform).get(list_performances))
-        .route("/v1/namespaces/{ns}/performances/{id}", get(get_performance))
+        .route(
+            "/v1/namespaces/{ns}/performances",
+            post(perform).get(list_performances),
+        )
+        .route(
+            "/v1/namespaces/{ns}/performances/{id}",
+            get(get_performance),
+        )
         .route("/v1/metrics", get(metrics_summary))
         .with_state(state)
 }
@@ -199,7 +205,9 @@ fn validate_ns(ns: &str) -> Result<(), StatusCode> {
     if ns.is_empty()
         || ns.contains('/')
         || ns.contains("..")
-        || !ns.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        || !ns
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
         return Err(StatusCode::BAD_REQUEST);
     }

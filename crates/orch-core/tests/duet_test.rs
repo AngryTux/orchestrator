@@ -87,7 +87,11 @@ async fn duet_returns_two_sections() {
         .unwrap();
 
     assert_eq!(coda.formation, FormationType::Duet);
-    assert_eq!(coda.sections.len(), 2, "duet must produce exactly 2 sections");
+    assert_eq!(
+        coda.sections.len(),
+        2,
+        "duet must produce exactly 2 sections"
+    );
     assert!(coda.sections[0].success);
     assert!(coda.sections[1].success);
     assert!(coda.performance_id.starts_with("perf-"));
@@ -104,11 +108,7 @@ async fn duet_returns_two_sections() {
 async fn duet_runs_in_parallel() {
     let dir = temp_dir("parallel");
     // Each section sleeps 200ms. If parallel, total should be ~200ms, not ~400ms.
-    let spec = mock_provider(
-        &dir,
-        "slow",
-        "#!/bin/sh\nsleep 0.2\necho \"done\"\n",
-    );
+    let spec = mock_provider(&dir, "slow", "#!/bin/sh\nsleep 0.2\necho \"done\"\n");
     let (creds, cred_dir) = setup("parallel-c");
     let engine = PerformanceEngine::new(creds);
 
@@ -177,7 +177,12 @@ async fn duet_summary_consolidates_outputs() {
     let engine = PerformanceEngine::new(creds);
 
     let coda = engine
-        .perform("default", "compare Redis vs Memcached", &spec, FormationType::Duet)
+        .perform(
+            "default",
+            "compare Redis vs Memcached",
+            &spec,
+            FormationType::Duet,
+        )
         .await
         .unwrap();
 

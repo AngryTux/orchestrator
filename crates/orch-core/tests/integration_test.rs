@@ -87,7 +87,12 @@ echo "no prompt"; exit 1
     let engine = PerformanceEngine::new(creds);
 
     let coda = engine
-        .perform("default", "what is CQRS?", &spec, orch_core::contracts::FormationType::Solo)
+        .perform(
+            "default",
+            "what is CQRS?",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
         .await
         .unwrap();
 
@@ -119,7 +124,15 @@ async fn pipeline_failing_provider_captures_error() {
     let (creds, cred_dir) = setup_credentials("fail-creds", "failing", "key");
     let engine = PerformanceEngine::new(creds);
 
-    let coda = engine.perform("default", "test", &spec, orch_core::contracts::FormationType::Solo).await.unwrap();
+    let coda = engine
+        .perform(
+            "default",
+            "test",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(coda.formation, FormationType::Solo);
     assert!(!coda.sections[0].success);
@@ -145,7 +158,15 @@ async fn pipeline_credential_injected_as_env_var() {
     let (creds, cred_dir) = setup_credentials("env-creds", "env-check", "sk-secret-789");
     let engine = PerformanceEngine::new(creds);
 
-    let coda = engine.perform("default", "test", &spec, orch_core::contracts::FormationType::Solo).await.unwrap();
+    let coda = engine
+        .perform(
+            "default",
+            "test",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await
+        .unwrap();
 
     assert!(coda.sections[0].success);
     assert!(
@@ -166,11 +187,7 @@ async fn pipeline_credential_injected_as_env_var() {
 async fn pipeline_spec_fields_drive_invocation() {
     let dir = temp_dir("spec-fields");
     // Provider that prints all received arguments
-    let binary = create_mock_binary(
-        &dir,
-        "args-provider",
-        "#!/bin/sh\necho \"args: $*\"\n",
-    );
+    let binary = create_mock_binary(&dir, "args-provider", "#!/bin/sh\necho \"args: $*\"\n");
 
     let spec = load_spec("echo-provider.yaml", &binary);
 
@@ -179,7 +196,12 @@ async fn pipeline_spec_fields_drive_invocation() {
     let engine = PerformanceEngine::new(creds);
 
     let coda = engine
-        .perform("default", "my prompt here", &spec, orch_core::contracts::FormationType::Solo)
+        .perform(
+            "default",
+            "my prompt here",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
         .await
         .unwrap();
 
@@ -208,7 +230,14 @@ async fn pipeline_missing_credential_returns_error() {
     // NOT storing any credential for "echo"
 
     let engine = PerformanceEngine::new(creds);
-    let result = engine.perform("default", "test", &spec, orch_core::contracts::FormationType::Solo).await;
+    let result = engine
+        .perform(
+            "default",
+            "test",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await;
 
     assert!(result.is_err(), "should fail without credential");
 
@@ -237,8 +266,24 @@ async fn pipeline_namespace_scoped_credentials() {
     let creds = Arc::new(store);
     let engine = PerformanceEngine::new(creds);
 
-    let coda_default = engine.perform("default", "test", &spec, orch_core::contracts::FormationType::Solo).await.unwrap();
-    let coda_secure = engine.perform("secure", "test", &spec, orch_core::contracts::FormationType::Solo).await.unwrap();
+    let coda_default = engine
+        .perform(
+            "default",
+            "test",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await
+        .unwrap();
+    let coda_secure = engine
+        .perform(
+            "secure",
+            "test",
+            &spec,
+            orch_core::contracts::FormationType::Solo,
+        )
+        .await
+        .unwrap();
 
     assert!(coda_default.summary.contains("key=default-key"));
     assert!(coda_secure.summary.contains("key=secure-key"));

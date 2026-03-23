@@ -35,11 +35,7 @@ fn sample_coda(id: &str, formation: FormationType, success: bool) -> CodaContrac
             cost_usd: 0.01,
             duration_ms: 500,
             success,
-            error: if success {
-                None
-            } else {
-                Some("failed".into())
-            },
+            error: if success { None } else { Some("failed".into()) },
         }],
         total_tokens_in: 100,
         total_tokens_out: 200,
@@ -104,13 +100,25 @@ fn list_performances_by_namespace() {
     let store = MetricsStore::open(&dir.join("test.db")).unwrap();
 
     store
-        .save("default", "prompt 1", &sample_coda("p1", FormationType::Solo, true))
+        .save(
+            "default",
+            "prompt 1",
+            &sample_coda("p1", FormationType::Solo, true),
+        )
         .unwrap();
     store
-        .save("default", "prompt 2", &sample_coda("p2", FormationType::Duet, true))
+        .save(
+            "default",
+            "prompt 2",
+            &sample_coda("p2", FormationType::Duet, true),
+        )
         .unwrap();
     store
-        .save("secure", "prompt 3", &sample_coda("p3", FormationType::Solo, false))
+        .save(
+            "secure",
+            "prompt 3",
+            &sample_coda("p3", FormationType::Solo, false),
+        )
         .unwrap();
 
     let default_list = store.list("default").unwrap();
@@ -145,13 +153,25 @@ fn metrics_summary() {
     let store = MetricsStore::open(&dir.join("test.db")).unwrap();
 
     store
-        .save("default", "p1", &sample_coda("p1", FormationType::Solo, true))
+        .save(
+            "default",
+            "p1",
+            &sample_coda("p1", FormationType::Solo, true),
+        )
         .unwrap();
     store
-        .save("default", "p2", &sample_coda("p2", FormationType::Duet, true))
+        .save(
+            "default",
+            "p2",
+            &sample_coda("p2", FormationType::Duet, true),
+        )
         .unwrap();
     store
-        .save("default", "p3", &sample_coda("p3", FormationType::Solo, false))
+        .save(
+            "default",
+            "p3",
+            &sample_coda("p3", FormationType::Solo, false),
+        )
         .unwrap();
 
     let summary = store.summary().unwrap();
@@ -174,7 +194,11 @@ fn data_persists_across_reopens() {
     {
         let store = MetricsStore::open(&db_path).unwrap();
         store
-            .save("default", "test", &sample_coda("p1", FormationType::Solo, true))
+            .save(
+                "default",
+                "test",
+                &sample_coda("p1", FormationType::Solo, true),
+            )
             .unwrap();
     } // store dropped, connection closed
 

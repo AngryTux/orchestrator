@@ -82,7 +82,10 @@ fn detect_kernel_on_this_system() {
 fn detect_security_capabilities() {
     let sec = detect_security();
     // On a modern Linux system, at least seccomp or cgroup_v2 should be available
-    assert!(sec.seccomp || sec.cgroup_v2, "expected at least seccomp or cgroup_v2");
+    assert!(
+        sec.seccomp || sec.cgroup_v2,
+        "expected at least seccomp or cgroup_v2"
+    );
 }
 
 #[test]

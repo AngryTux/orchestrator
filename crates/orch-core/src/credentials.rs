@@ -72,7 +72,9 @@ impl CredentialStore {
     pub fn get(&self, namespace: &str, provider: &str) -> anyhow::Result<String> {
         validate_name(namespace, "namespace")?;
         validate_name(provider, "provider")?;
-        let path = self.credential_dir(namespace).join(format!("{provider}.enc"));
+        let path = self
+            .credential_dir(namespace)
+            .join(format!("{provider}.enc"));
         let encrypted = std::fs::read_to_string(&path)
             .map_err(|_| anyhow!("credential not found: {namespace}/{provider}"))?;
         let decrypted = self.decrypt(&encrypted)?;
@@ -83,7 +85,9 @@ impl CredentialStore {
     pub fn delete(&self, namespace: &str, provider: &str) -> anyhow::Result<()> {
         validate_name(namespace, "namespace")?;
         validate_name(provider, "provider")?;
-        let path = self.credential_dir(namespace).join(format!("{provider}.enc"));
+        let path = self
+            .credential_dir(namespace)
+            .join(format!("{provider}.enc"));
         std::fs::remove_file(&path)
             .map_err(|_| anyhow!("credential not found: {namespace}/{provider}"))
     }
@@ -176,9 +180,7 @@ fn validate_name(name: &str, field: &str) -> anyhow::Result<()> {
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
-        return Err(anyhow!(
-            "{field} must match [a-zA-Z0-9_-]: {name:?}"
-        ));
+        return Err(anyhow!("{field} must match [a-zA-Z0-9_-]: {name:?}"));
     }
     Ok(())
 }

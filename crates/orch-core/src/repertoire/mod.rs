@@ -8,7 +8,7 @@ pub use integration::*;
 pub use isolation::*;
 pub use provider::*;
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

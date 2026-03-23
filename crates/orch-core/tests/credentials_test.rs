@@ -29,7 +29,9 @@ fn temp_store(name: &str) -> (CredentialStore, PathBuf) {
 #[test]
 fn encrypt_decrypt_roundtrip() {
     let (store, dir) = temp_store("roundtrip");
-    store.store("default", "claude", "sk-ant-secret-key-123").unwrap();
+    store
+        .store("default", "claude", "sk-ant-secret-key-123")
+        .unwrap();
     let decrypted = store.get("default", "claude").unwrap();
     assert_eq!(decrypted, "sk-ant-secret-key-123");
     let _ = std::fs::remove_dir_all(&dir);
@@ -42,14 +44,10 @@ fn each_encrypt_produces_different_ciphertext() {
     store.store("default", "provider-b", "same-key").unwrap();
 
     // Read raw encrypted files — they should differ (random nonce)
-    let a = std::fs::read_to_string(
-        dir.join("namespaces/default/credentials/provider-a.enc"),
-    )
-    .unwrap();
-    let b = std::fs::read_to_string(
-        dir.join("namespaces/default/credentials/provider-b.enc"),
-    )
-    .unwrap();
+    let a =
+        std::fs::read_to_string(dir.join("namespaces/default/credentials/provider-a.enc")).unwrap();
+    let b =
+        std::fs::read_to_string(dir.join("namespaces/default/credentials/provider-b.enc")).unwrap();
     assert_ne!(a, b, "same plaintext must produce different ciphertext");
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -178,7 +176,11 @@ fn rejects_path_traversal_in_namespace() {
 #[test]
 fn rejects_path_traversal_in_provider() {
     let (store, dir) = temp_store("traversal-prov");
-    assert!(store.store("default", "../../../etc/passwd", "key").is_err());
+    assert!(
+        store
+            .store("default", "../../../etc/passwd", "key")
+            .is_err()
+    );
     assert!(store.get("default", "../../shadow").is_err());
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -199,7 +201,9 @@ fn credential_to_env_pair() {
     let (store, dir) = temp_store("env");
     store.store("default", "claude", "sk-ant-key").unwrap();
 
-    let (var, val) = store.env_pair("default", "claude", "ANTHROPIC_API_KEY").unwrap();
+    let (var, val) = store
+        .env_pair("default", "claude", "ANTHROPIC_API_KEY")
+        .unwrap();
     assert_eq!(var, "ANTHROPIC_API_KEY");
     assert_eq!(val, "sk-ant-key");
     let _ = std::fs::remove_dir_all(&dir);

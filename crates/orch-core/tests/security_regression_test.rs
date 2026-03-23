@@ -111,7 +111,10 @@ fn base_dir_created_with_0700() {
 async fn isolated_process_cannot_read_stdin() {
     let result = spawn(&SpawnConfig {
         binary: "/bin/sh".into(),
-        args: vec!["-c".into(), "read -t 1 input 2>/dev/null; echo ${input:-empty}".into()],
+        args: vec![
+            "-c".into(),
+            "read -t 1 input 2>/dev/null; echo ${input:-empty}".into(),
+        ],
         ..SpawnConfig::default()
     })
     .await

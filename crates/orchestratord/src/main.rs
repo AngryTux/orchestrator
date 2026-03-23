@@ -37,10 +37,13 @@ async fn main() -> Result<()> {
 
     let data_dir = std::env::var("XDG_DATA_HOME").unwrap_or_else(|_| {
         let home = std::env::var("HOME").context("neither XDG_DATA_HOME nor HOME is set");
-        format!("{}/.local/share", home.unwrap_or_else(|e| {
-            tracing::error!("{e}");
-            std::process::exit(1);
-        }))
+        format!(
+            "{}/.local/share",
+            home.unwrap_or_else(|e| {
+                tracing::error!("{e}");
+                std::process::exit(1);
+            })
+        )
     });
     let data_dir = std::path::PathBuf::from(data_dir).join("orchestrator");
 
@@ -64,8 +67,7 @@ async fn main() -> Result<()> {
             let Ok(content) = std::fs::read_to_string(&path) else {
                 continue;
             };
-            let Ok(spec) =
-                serde_yaml::from_str::<orch_core::repertoire::ProviderSpec>(&content)
+            let Ok(spec) = serde_yaml::from_str::<orch_core::repertoire::ProviderSpec>(&content)
             else {
                 continue;
             };

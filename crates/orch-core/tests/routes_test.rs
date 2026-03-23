@@ -234,7 +234,11 @@ async fn route_rejects_invalid_namespace() {
 
     // axum rejects path traversal at the router level (404) or our validate_ns rejects it (400)
     // Either way, it must NOT be 200
-    assert_ne!(response.status(), StatusCode::OK, "path traversal must not succeed");
+    assert_ne!(
+        response.status(),
+        StatusCode::OK,
+        "path traversal must not succeed"
+    );
 
     let _ = std::fs::remove_dir_all(&dir);
 }
