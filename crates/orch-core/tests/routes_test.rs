@@ -7,6 +7,7 @@ use http_body_util::BodyExt;
 use orch_core::credentials::CredentialStore;
 use orch_core::engine::PerformanceEngine;
 use orch_core::metrics::MetricsStore;
+use orch_core::namespace::NamespaceManager;
 use orch_core::server::AppState;
 use serde_json::{Value, json};
 use std::os::unix::fs::PermissionsExt;
@@ -70,6 +71,7 @@ auth:
         engine,
         providers,
         metrics,
+        namespaces: Arc::new(NamespaceManager::new(dir.clone())),
     };
     (orch_core::server::app(state), dir)
 }
@@ -239,6 +241,151 @@ async fn route_rejects_invalid_namespace() {
         StatusCode::OK,
         "path traversal must not succeed"
     );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ─── DELETE /v1/namespaces/{ns}/providers/{name} ─────────
+
+#[tokio::test]
+async fn route_delete_provider() {
+    let (app, dir) = test_app("del-prov");
+
+    let app_clone = app.clone();
+    app_clone
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/namespaces/default/providers")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({"name": "mock", "key": "test-key"}).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/v1/namespaces/default/providers/mock")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["deleted"], "mock");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ─── POST /v1/namespaces/{ns}/providers/{name}/test ──────
+
+#[tokio::test]
+async fn route_test_provider() {
+    let (app, dir) = test_app("test-prov");
+
+    let app_clone = app.clone();
+    app_clone
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/namespaces/default/providers")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({"name": "mock", "key": "key"}).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/namespaces/default/providers/mock/test")
+                .header("content-type", "application/json")
+                .body(Body::from("{}"))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["credential"], "valid");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ─── Namespace endpoints ─────────────────────────────────
+
+#[tokio::test]
+async fn route_namespace_crud() {
+    let (app, dir) = test_app("ns-crud");
+
+    // List (empty)
+    let app1 = app.clone();
+    let resp = app1
+        .oneshot(
+            Request::builder()
+                .uri("/v1/namespaces")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Create
+    let app2 = app.clone();
+    let resp = app2
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/namespaces")
+                .header("content-type", "application/json")
+                .body(Body::from(json!({"name": "prod"}).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Inspect
+    let app3 = app.clone();
+    let resp = app3
+        .oneshot(
+            Request::builder()
+                .uri("/v1/namespaces/prod")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = resp.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["name"], "prod");
+
+    // Delete
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/v1/namespaces/prod")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
 
     let _ = std::fs::remove_dir_all(&dir);
 }

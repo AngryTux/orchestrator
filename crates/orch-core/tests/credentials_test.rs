@@ -4,6 +4,7 @@ use http_body_util::BodyExt;
 use orch_core::credentials::CredentialStore;
 use orch_core::engine::PerformanceEngine;
 use orch_core::metrics::MetricsStore;
+use orch_core::namespace::NamespaceManager;
 use orch_core::server::AppState;
 use serde_json::{Value, json};
 use std::path::PathBuf;
@@ -230,6 +231,7 @@ fn test_app(name: &str) -> (axum::Router, PathBuf) {
         engine,
         providers: std::collections::HashMap::new(),
         metrics,
+        namespaces: Arc::new(NamespaceManager::new(dir.clone())),
     };
     (orch_core::server::app(state), dir)
 }

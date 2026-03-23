@@ -69,6 +69,20 @@ enum ProviderCommand {
         #[arg(short, long, default_value = "default")]
         namespace: String,
     },
+    /// Remove a provider credential
+    Rm {
+        /// Provider name
+        name: String,
+        #[arg(short, long, default_value = "default")]
+        namespace: String,
+    },
+    /// Test a provider (credential + binary)
+    Test {
+        /// Provider name
+        name: String,
+        #[arg(short, long, default_value = "default")]
+        namespace: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -91,6 +105,21 @@ enum PerformanceCommand {
 enum NamespaceCommand {
     /// List namespaces
     List,
+    /// Create a namespace
+    Create {
+        /// Namespace name
+        name: String,
+    },
+    /// Inspect a namespace
+    Inspect {
+        /// Namespace name
+        name: String,
+    },
+    /// Delete a namespace
+    Rm {
+        /// Namespace name
+        name: String,
+    },
 }
 
 #[tokio::main]
@@ -168,6 +197,27 @@ async fn main() -> Result<()> {
                     "Provider '{}' added to namespace '{}'",
                     json["provider"].as_str().unwrap_or(&name),
                     json["namespace"].as_str().unwrap_or(&namespace)
+                );
+            }
+            ProviderCommand::Rm { name, namespace } => {
+                client
+                    .delete(&format!("/v1/namespaces/{namespace}/providers/{name}"))
+                    .await?;
+                println!("Provider '{name}' removed from namespace '{namespace}'");
+            }
+            ProviderCommand::Test { name, namespace } => {
+                let resp = client
+                    .post(
+                        &format!("/v1/namespaces/{namespace}/providers/{name}/test"),
+                        "{}",
+                    )
+                    .await?;
+                let json: serde_json::Value = serde_json::from_str(&resp)?;
+                println!(
+                    "Provider '{}': credential {}, binary {}",
+                    name,
+                    json["credential"].as_str().unwrap_or("?"),
+                    json["binary"].as_str().unwrap_or("?")
                 );
             }
         },
@@ -293,27 +343,35 @@ async fn main() -> Result<()> {
 
         Command::Namespace(sub) => match sub {
             NamespaceCommand::List => {
-                // Namespace list is not an API endpoint yet — read from filesystem
-                let data_dir = std::env::var("XDG_DATA_HOME").unwrap_or_else(|_| {
-                    format!("{}/.local/share", std::env::var("HOME").unwrap_or_default())
-                });
-                let ns_dir = std::path::PathBuf::from(data_dir).join("orchestrator/namespaces");
-                if ns_dir.exists() {
-                    let mut names: Vec<String> = std::fs::read_dir(&ns_dir)?
-                        .filter_map(|e| e.ok())
-                        .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
-                        .filter_map(|e| e.file_name().to_str().map(String::from))
-                        .collect();
-                    names.sort();
-                    for name in &names {
-                        println!("{name}");
-                    }
+                let body = client.get("/v1/namespaces").await?;
+                let json: serde_json::Value = serde_json::from_str(&body)?;
+                if let Some(names) = json.as_array() {
                     if names.is_empty() {
                         println!("No namespaces created yet");
+                    } else {
+                        for n in names {
+                            println!("{}", n.as_str().unwrap_or("?"));
+                        }
                     }
-                } else {
-                    println!("No namespaces created yet");
                 }
+            }
+            NamespaceCommand::Create { name } => {
+                let body = serde_json::json!({"name": name});
+                client.post("/v1/namespaces", &body.to_string()).await?;
+                println!("Namespace '{name}' created");
+            }
+            NamespaceCommand::Inspect { name } => {
+                let body = client.get(&format!("/v1/namespaces/{name}")).await?;
+                let json: serde_json::Value = serde_json::from_str(&body)?;
+                if json.is_null() {
+                    println!("Namespace '{name}' not found");
+                } else {
+                    println!("{}", serde_json::to_string_pretty(&json)?);
+                }
+            }
+            NamespaceCommand::Rm { name } => {
+                client.delete(&format!("/v1/namespaces/{name}")).await?;
+                println!("Namespace '{name}' deleted");
             }
         },
     }

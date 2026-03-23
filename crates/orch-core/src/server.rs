@@ -7,8 +7,9 @@ use std::sync::Arc;
 
 use crate::credentials::CredentialStore;
 use crate::engine::PerformanceEngine;
-use crate::host::HostInfo;
+use crate::host::{self, HostInfo};
 use crate::metrics::MetricsStore;
+use crate::namespace::NamespaceManager;
 use crate::repertoire::ProviderSpec;
 
 // ─── App State ───────────────────────────────────────────
@@ -19,6 +20,7 @@ pub struct AppState {
     pub engine: Arc<PerformanceEngine>,
     pub providers: std::collections::HashMap<String, ProviderSpec>,
     pub metrics: Arc<MetricsStore>,
+    pub namespaces: Arc<NamespaceManager>,
 }
 
 // ─── System handlers (no state needed) ───────────────────
@@ -102,6 +104,96 @@ async fn list_providers(
         namespace: ns,
         providers,
     }))
+}
+
+async fn delete_provider(
+    State(state): State<AppState>,
+    Path((ns, name)): Path<(String, String)>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    validate_ns(&ns)?;
+    state
+        .credentials
+        .delete(&ns, &name)
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+    Ok(Json(serde_json::json!({"status": "ok", "deleted": name})))
+}
+
+async fn test_provider(
+    State(state): State<AppState>,
+    Path((ns, name)): Path<(String, String)>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    validate_ns(&ns)?;
+    // Verify credential exists and is decryptable
+    state
+        .credentials
+        .get(&ns, &name)
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    // Check if provider binary is in PATH
+    let binary_found = state
+        .providers
+        .get(&name)
+        .map(|spec| host::find_in_path(&spec.detection.binary).is_some())
+        .unwrap_or(false);
+
+    Ok(Json(serde_json::json!({
+        "status": "ok",
+        "provider": name,
+        "credential": "valid",
+        "binary": if binary_found { "found" } else { "not found" }
+    })))
+}
+
+// ─── Namespace handlers ──────────────────────────────────
+
+async fn list_namespaces(State(state): State<AppState>) -> Result<Json<Vec<String>>, StatusCode> {
+    state
+        .namespaces
+        .list()
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+#[derive(Deserialize)]
+struct CreateNamespaceRequest {
+    name: String,
+}
+
+async fn create_namespace(
+    State(state): State<AppState>,
+    Json(body): Json<CreateNamespaceRequest>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    state
+        .namespaces
+        .create(&body.name)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    Ok(Json(
+        serde_json::json!({"status": "ok", "namespace": body.name}),
+    ))
+}
+
+async fn inspect_namespace(
+    State(state): State<AppState>,
+    Path(ns): Path<String>,
+) -> Result<Json<Option<crate::namespace::NamespaceInfo>>, StatusCode> {
+    validate_ns(&ns)?;
+    state
+        .namespaces
+        .inspect(&ns)
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn delete_namespace(
+    State(state): State<AppState>,
+    Path(ns): Path<String>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    validate_ns(&ns)?;
+    state
+        .namespaces
+        .delete(&ns)
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+    Ok(Json(serde_json::json!({"status": "ok", "deleted": ns})))
 }
 
 // ─── Performance handlers ────────────────────────────────
@@ -195,6 +287,22 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/v1/namespaces/{ns}/performances/{id}",
             get(get_performance),
+        )
+        .route(
+            "/v1/namespaces/{ns}/providers/{name}",
+            axum::routing::delete(delete_provider),
+        )
+        .route(
+            "/v1/namespaces/{ns}/providers/{name}/test",
+            post(test_provider),
+        )
+        .route(
+            "/v1/namespaces",
+            post(create_namespace).get(list_namespaces),
+        )
+        .route(
+            "/v1/namespaces/{ns}",
+            get(inspect_namespace).delete(delete_namespace),
         )
         .route("/v1/metrics", get(metrics_summary))
         .with_state(state)

@@ -27,6 +27,10 @@ impl DaemonClient {
         self.request("POST", path, Some(body)).await
     }
 
+    pub async fn delete(&self, path: &str) -> Result<String> {
+        self.request("DELETE", path, None).await
+    }
+
     async fn request(&self, method: &str, path: &str, body: Option<&str>) -> Result<String> {
         let stream = UnixStream::connect(&self.socket_path)
             .await

@@ -82,11 +82,16 @@ async fn main() -> Result<()> {
             .context("failed to open metrics database")?,
     );
 
+    let namespaces = std::sync::Arc::new(orch_core::namespace::NamespaceManager::new(
+        data_dir.clone(),
+    ));
+
     let state = orch_core::server::AppState {
         credentials,
         engine,
         providers,
         metrics,
+        namespaces,
     };
 
     let _ = sd_notify::notify(&[NotifyState::Ready]);
