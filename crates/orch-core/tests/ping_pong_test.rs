@@ -117,6 +117,7 @@ async fn ping_pong_all_provider_specs() {
                 "ping",
                 &spec,
                 orch_core::contracts::FormationType::Solo,
+                &[],
             )
             .await;
 
@@ -216,6 +217,7 @@ async fn all_specs_produce_solo_formation() {
                 "test",
                 &spec,
                 orch_core::contracts::FormationType::Solo,
+                &[],
             )
             .await
             .unwrap();

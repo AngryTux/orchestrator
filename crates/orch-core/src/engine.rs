@@ -13,31 +13,46 @@ impl PerformanceEngine {
         Self { credentials }
     }
 
-    /// Execute a performance with the given formation.
+    /// Execute a performance with the given formation and optional models.
+    ///
+    /// `models` controls which model each section uses:
+    /// - `&[]` → provider default (no --model flag)
+    /// - `&["haiku"]` → all sections use haiku
+    /// - `&["haiku", "opus"]` → section 1 uses haiku, section 2 uses opus
     pub async fn perform(
         &self,
         namespace: &str,
         prompt: &str,
         provider_spec: &ProviderSpec,
         formation: FormationType,
+        models: &[String],
     ) -> anyhow::Result<CodaContract> {
         match formation {
-            FormationType::Solo => self.perform_solo(namespace, prompt, provider_spec).await,
-            FormationType::Duet => self.perform_duet(namespace, prompt, provider_spec).await,
+            FormationType::Solo => {
+                let model = models.first().map(|s| s.as_str());
+                self.perform_solo(namespace, prompt, provider_spec, model)
+                    .await
+            }
+            FormationType::Duet => {
+                let model_a = models.first().map(|s| s.as_str());
+                let model_b = models.get(1).or(models.first()).map(|s| s.as_str());
+                self.perform_duet(namespace, prompt, provider_spec, model_a, model_b)
+                    .await
+            }
             other => Err(anyhow::anyhow!("formation not supported: {other:?}")),
         }
     }
 
-    /// Solo: one prompt → one provider → one Coda.
     async fn perform_solo(
         &self,
         namespace: &str,
         prompt: &str,
         provider_spec: &ProviderSpec,
+        model: Option<&str>,
     ) -> anyhow::Result<CodaContract> {
         let perf_id = generate_id("perf");
         let section = self
-            .spawn_section(namespace, "sec-001", prompt, provider_spec)
+            .spawn_section(namespace, "sec-001", prompt, provider_spec, model)
             .await?;
 
         let summary = section.output.clone();
@@ -56,30 +71,27 @@ impl PerformanceEngine {
         })
     }
 
-    /// Duet: same prompt → 2 parallel workspaces → consolidation → Coda.
     async fn perform_duet(
         &self,
         namespace: &str,
         prompt: &str,
         provider_spec: &ProviderSpec,
+        model_a: Option<&str>,
+        model_b: Option<&str>,
     ) -> anyhow::Result<CodaContract> {
         let perf_id = generate_id("perf");
 
-        // Spawn 2 sections in parallel
         let (r1, r2) = tokio::join!(
-            self.spawn_section(namespace, "sec-001", prompt, provider_spec),
-            self.spawn_section(namespace, "sec-002", prompt, provider_spec),
+            self.spawn_section(namespace, "sec-001", prompt, provider_spec, model_a),
+            self.spawn_section(namespace, "sec-002", prompt, provider_spec, model_b),
         );
 
         let sec1 = r1?;
         let sec2 = r2?;
 
-        // Harmony: both sections succeeded
         let harmony = sec1.success && sec2.success;
-
-        // Consolidation (Foundation: simple merge; future: Maestro LLM call)
         let summary = consolidate(&[&sec1, &sec2]);
-        let total_duration = sec1.duration_ms.max(sec2.duration_ms); // parallel = max, not sum
+        let total_duration = sec1.duration_ms.max(sec2.duration_ms);
 
         Ok(CodaContract {
             performance_id: perf_id,
@@ -94,23 +106,21 @@ impl PerformanceEngine {
         })
     }
 
-    /// Spawn a single section: invoke the provider and capture the result.
     async fn spawn_section(
         &self,
         namespace: &str,
         section_id: &str,
         prompt: &str,
         provider_spec: &ProviderSpec,
+        model: Option<&str>,
     ) -> anyhow::Result<ResultContract> {
         let ws_id = generate_id("ws");
         let api_key = self
             .credentials
             .get(namespace, &provider_spec.metadata.name)?;
 
-        let (binary, args) = build_invocation(provider_spec, prompt);
+        let (binary, args) = build_invocation(provider_spec, prompt, model);
 
-        // Providers with "detect" auth (session-based CLIs like Claude Code)
-        // use their own auth — don't inject stored credential as env var.
         let uses_detect = provider_spec.auth.methods.contains(&"detect".to_string());
 
         let env = if uses_detect {
@@ -129,11 +139,13 @@ impl PerformanceEngine {
         .await?;
 
         let success = result.exit_code == 0;
+        let model_used = model.unwrap_or("default").to_string();
+
         Ok(ResultContract {
             workspace_id: ws_id,
             section_id: section_id.to_string(),
             provider: provider_spec.metadata.name.clone(),
-            model: String::new(),
+            model: model_used,
             output: result.stdout.trim().to_string(),
             tokens_in: 0,
             tokens_out: 0,
@@ -149,20 +161,29 @@ impl PerformanceEngine {
     }
 }
 
-/// Foundation consolidation: merge section outputs into a summary.
-/// Future: this becomes a Maestro LLM call.
 fn consolidate(sections: &[&ResultContract]) -> String {
     let mut summary = String::new();
     for (i, section) in sections.iter().enumerate() {
         if !summary.is_empty() {
             summary.push_str("\n\n");
         }
+        let model_tag = if section.model != "default" {
+            format!(" [{}]", section.model)
+        } else {
+            String::new()
+        };
         if section.success {
-            summary.push_str(&format!("--- Section {} ---\n{}", i + 1, section.output));
+            summary.push_str(&format!(
+                "--- Section {}{} ---\n{}",
+                i + 1,
+                model_tag,
+                section.output
+            ));
         } else {
             summary.push_str(&format!(
-                "--- Section {} (failed) ---\n{}",
+                "--- Section {}{} (failed) ---\n{}",
                 i + 1,
+                model_tag,
                 section.error.as_deref().unwrap_or("unknown error")
             ));
         }
@@ -170,9 +191,20 @@ fn consolidate(sections: &[&ResultContract]) -> String {
     summary
 }
 
-fn build_invocation(spec: &ProviderSpec, prompt: &str) -> (String, Vec<String>) {
+fn build_invocation(
+    spec: &ProviderSpec,
+    prompt: &str,
+    model: Option<&str>,
+) -> (String, Vec<String>) {
     let binary = spec.invocation.cmd[0].clone();
     let mut args: Vec<String> = spec.invocation.cmd[1..].to_vec();
+
+    // Add model flag if specified and provider supports it
+    if let (Some(m), Some(flag)) = (model, &spec.invocation.model_flag) {
+        args.push(flag.clone());
+        args.push(m.to_string());
+    }
+
     args.push(spec.invocation.prompt_flag.clone());
     args.push(prompt.to_string());
     args.extend(spec.invocation.output_format_flag.clone());

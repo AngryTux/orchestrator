@@ -94,6 +94,7 @@ async fn solo_performance_returns_coda() {
             "what is CQRS?",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
@@ -128,6 +129,7 @@ async fn solo_performance_captures_provider_name() {
             "test",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
@@ -160,6 +162,7 @@ async fn solo_performance_injects_credential() {
             "test",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
@@ -194,6 +197,7 @@ async fn solo_performance_fails_without_credential() {
             "test",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await;
 
@@ -228,6 +232,7 @@ async fn solo_performance_captures_provider_failure() {
             "test",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
@@ -262,6 +267,7 @@ async fn solo_performance_generates_unique_ids() {
             "test1",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
@@ -271,6 +277,7 @@ async fn solo_performance_generates_unique_ids() {
             "test2",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();

@@ -39,6 +39,9 @@ enum Command {
         /// Formation (solo, duet)
         #[arg(short, long)]
         formation: Option<String>,
+        /// Model(s) to use. For duet: "haiku,opus" assigns one per section
+        #[arg(short, long)]
+        model: Option<String>,
     },
 
     /// List past performances
@@ -227,6 +230,7 @@ async fn main() -> Result<()> {
             provider,
             namespace,
             formation,
+            model,
         } => {
             let mut body = serde_json::json!({
                 "prompt": prompt,
@@ -234,6 +238,10 @@ async fn main() -> Result<()> {
             });
             if let Some(f) = &formation {
                 body["formation"] = serde_json::Value::String(f.clone());
+            }
+            if let Some(m) = &model {
+                let models: Vec<&str> = m.split(',').map(|s| s.trim()).collect();
+                body["models"] = serde_json::json!(models);
             }
 
             let resp = client
@@ -266,11 +274,13 @@ async fn main() -> Result<()> {
                     } else {
                         "FAILED"
                     };
+                    let model_info = s["model"].as_str().unwrap_or("default");
                     eprintln!(
-                        "  {} [{}] {}ms",
+                        "  {} [{}] {}ms ({})",
                         s["section_id"].as_str().unwrap_or("?"),
                         status,
-                        s["duration_ms"]
+                        s["duration_ms"],
+                        model_info
                     );
                 }
             }

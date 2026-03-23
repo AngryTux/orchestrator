@@ -82,7 +82,7 @@ async fn duet_returns_two_sections() {
     let engine = PerformanceEngine::new(creds);
 
     let coda = engine
-        .perform("default", "test prompt", &spec, FormationType::Duet)
+        .perform("default", "test prompt", &spec, FormationType::Duet, &[])
         .await
         .unwrap();
 
@@ -113,7 +113,7 @@ async fn duet_runs_in_parallel() {
     let engine = PerformanceEngine::new(creds);
 
     let coda = engine
-        .perform("default", "test", &spec, FormationType::Duet)
+        .perform("default", "test", &spec, FormationType::Duet, &[])
         .await
         .unwrap();
 
@@ -143,7 +143,7 @@ async fn duet_collects_both_outputs() {
     let engine = PerformanceEngine::new(creds);
 
     let coda = engine
-        .perform("default", "what is CQRS?", &spec, FormationType::Duet)
+        .perform("default", "what is CQRS?", &spec, FormationType::Duet, &[])
         .await
         .unwrap();
 
@@ -182,6 +182,7 @@ async fn duet_summary_consolidates_outputs() {
             "compare Redis vs Memcached",
             &spec,
             FormationType::Duet,
+            &[],
         )
         .await
         .unwrap();
@@ -207,7 +208,7 @@ async fn duet_harmony_when_both_succeed() {
     let engine = PerformanceEngine::new(creds);
 
     let coda = engine
-        .perform("default", "test", &spec, FormationType::Duet)
+        .perform("default", "test", &spec, FormationType::Duet, &[])
         .await
         .unwrap();
 
@@ -242,7 +243,7 @@ fi
     let engine = PerformanceEngine::new(creds);
 
     let coda = engine
-        .perform("default", "test", &spec, FormationType::Duet)
+        .perform("default", "test", &spec, FormationType::Duet, &[])
         .await
         .unwrap();
 
@@ -270,7 +271,7 @@ async fn solo_still_works_with_formation_param() {
     let engine = PerformanceEngine::new(creds);
 
     let coda = engine
-        .perform("default", "hello", &spec, FormationType::Solo)
+        .perform("default", "hello", &spec, FormationType::Solo, &[])
         .await
         .unwrap();
 
@@ -289,7 +290,7 @@ async fn unsupported_formation_returns_error() {
     let engine = PerformanceEngine::new(creds);
 
     let result = engine
-        .perform("default", "test", &spec, FormationType::Opera)
+        .perform("default", "test", &spec, FormationType::Opera, &[])
         .await;
 
     assert!(result.is_err());

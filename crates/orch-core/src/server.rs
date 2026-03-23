@@ -205,6 +205,8 @@ struct PerformRequest {
     provider: Option<String>,
     #[serde(default)]
     formation: Option<crate::contracts::FormationType>,
+    #[serde(default)]
+    models: Vec<String>,
 }
 
 async fn perform(
@@ -225,7 +227,7 @@ async fn perform(
 
     let coda = state
         .engine
-        .perform(&ns, &body.prompt, spec, formation)
+        .perform(&ns, &body.prompt, spec, formation, &body.models)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 

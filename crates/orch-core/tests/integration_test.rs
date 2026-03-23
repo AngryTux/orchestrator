@@ -92,6 +92,7 @@ echo "no prompt"; exit 1
             "what is CQRS?",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
@@ -130,6 +131,7 @@ async fn pipeline_failing_provider_captures_error() {
             "test",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
@@ -164,6 +166,7 @@ async fn pipeline_credential_injected_as_env_var() {
             "test",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
@@ -201,6 +204,7 @@ async fn pipeline_spec_fields_drive_invocation() {
             "my prompt here",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
@@ -236,6 +240,7 @@ async fn pipeline_missing_credential_returns_error() {
             "test",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await;
 
@@ -272,6 +277,7 @@ async fn pipeline_namespace_scoped_credentials() {
             "test",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
@@ -281,6 +287,7 @@ async fn pipeline_namespace_scoped_credentials() {
             "test",
             &spec,
             orch_core::contracts::FormationType::Solo,
+            &[],
         )
         .await
         .unwrap();
