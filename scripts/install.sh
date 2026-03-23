@@ -70,22 +70,8 @@ ok "Source downloaded"
 info "Building (release mode). This may take a few minutes..."
 cd "$BUILD_DIR/orchestrator"
 
-# Show each crate as it compiles
-COMPILED=0
-cargo build --release 2>&1 | while IFS= read -r line; do
-    case "$line" in
-        *Compiling*)
-            COMPILED=$((COMPILED + 1))
-            CRATE=$(echo "$line" | sed 's/.*Compiling \([^ ]*\) .*/\1/')
-            printf "  [%3d] %s\n" "$COMPILED" "$CRATE"
-            ;;
-        *Finished*)
-            ;;
-    esac
-done
-
-[ -f target/release/orchestratord ] || fail "Build failed"
-[ -f target/release/orch ] || fail "Build failed"
+# Cargo shows its own progress on stderr (goes to terminal directly)
+cargo build --release || fail "Build failed"
 ok "Build complete"
 
 # ─── Install binaries ────────────────────────────────────
