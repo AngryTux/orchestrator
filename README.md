@@ -16,10 +16,20 @@ Secure LLM workspace manager and orchestrator. Run AI providers in isolated sand
 - Rust (edition 2024)
 - systemd (for socket activation)
 
+## Install
+
+```bash
+curl -fsSL https://bit.ly/get-orchestrator | sh
+```
+
+Detects OS/arch, builds from source, installs binaries, configures systemd socket activation.
+
+Requires: Linux, git, cargo ([rustup.rs](https://rustup.rs))
+
 ## Quick start
 
 ```bash
-# Build
+# Build from source
 make build
 
 # Run tests
