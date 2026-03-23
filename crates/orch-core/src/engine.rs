@@ -109,10 +109,21 @@ impl PerformanceEngine {
 
         let (binary, args) = build_invocation(provider_spec, prompt);
 
+        // Providers with "detect" auth (session-based CLIs like Claude Code)
+        // use their own auth — don't inject stored credential as env var.
+        let uses_detect = provider_spec.auth.methods.contains(&"detect".to_string());
+
+        let env = if uses_detect {
+            vec![]
+        } else {
+            vec![(provider_spec.auth.env_var.clone(), api_key)]
+        };
+
         let result = isolation::spawn(&SpawnConfig {
             binary,
             args,
-            env: vec![(provider_spec.auth.env_var.clone(), api_key)],
+            env,
+            inherit_env: uses_detect,
             ..SpawnConfig::default()
         })
         .await?;

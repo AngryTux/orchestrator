@@ -16,6 +16,9 @@ pub struct SpawnConfig {
     pub write_paths: Vec<PathBuf>,
     pub enable_landlock: bool,
     pub enable_close_range: bool,
+    /// Inherit parent environment instead of clean env.
+    /// Used for providers with session/config auth (e.g., Claude Code).
+    pub inherit_env: bool,
     pub enable_seccomp: bool,
     pub enable_rlimits: bool,
     pub rlimit_nproc: Option<u64>,
@@ -33,6 +36,7 @@ impl Default for SpawnConfig {
             write_paths: vec![],
             enable_landlock: false,
             enable_close_range: false,
+            inherit_env: false,
             enable_seccomp: false,
             enable_rlimits: false,
             rlimit_nproc: None,
@@ -74,9 +78,17 @@ fn spawn_blocking(config: &SpawnConfig) -> anyhow::Result<SpawnResult> {
 
     let mut cmd = Command::new(&config.binary);
     cmd.args(&config.args);
-    cmd.env_clear();
-    for (k, v) in &config.env {
-        cmd.env(k, v);
+    if config.inherit_env {
+        // Inherit parent env and add/override specified vars
+        for (k, v) in &config.env {
+            cmd.env(k, v);
+        }
+    } else {
+        // Clean env — only specified vars visible
+        cmd.env_clear();
+        for (k, v) in &config.env {
+            cmd.env(k, v);
+        }
     }
     cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::piped());
