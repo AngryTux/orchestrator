@@ -62,13 +62,39 @@ BUILD_DIR=$(mktemp -d)
 trap 'rm -rf "$BUILD_DIR"' EXIT
 
 info "Downloading source..."
-git clone --depth 1 "$REPO_URL.git" "$BUILD_DIR/orchestrator" 2>/dev/null
+git clone --depth 1 --progress "$REPO_URL.git" "$BUILD_DIR/orchestrator" 2>&1 | \
+    while IFS= read -r line; do
+        case "$line" in
+            *Receiving*|*Resolving*|*Counting*)
+                printf "\r  ${CYAN}%s${NC}" "$line"
+                ;;
+        esac
+    done
+printf "\r%-60s\n" ""
+[ -d "$BUILD_DIR/orchestrator" ] || fail "Download failed"
 ok "Source downloaded"
 
 # ─── Build ───────────────────────────────────────────────
-info "Building (release mode)..."
+info "Building (release mode). This may take a few minutes..."
 cd "$BUILD_DIR/orchestrator"
-cargo build --release --quiet 2>&1 || fail "Build failed"
+
+# Show progress spinner during compilation
+cargo build --release 2>&1 | while IFS= read -r line; do
+    # Count compiled crates
+    case "$line" in
+        *Compiling*)
+            CRATE=$(echo "$line" | sed 's/.*Compiling \([^ ]*\).*/\1/')
+            printf "\r${CYAN}  compiling${NC} %-30s" "$CRATE"
+            ;;
+        *Finished*)
+            printf "\r%-50s\n" ""
+            ;;
+    esac
+done
+
+# Verify build succeeded
+[ -f target/release/orchestratord ] || fail "Build failed"
+[ -f target/release/orch ] || fail "Build failed"
 ok "Build complete"
 
 # ─── Install binaries ────────────────────────────────────
