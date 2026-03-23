@@ -422,50 +422,121 @@ async fn main() -> Result<()> {
 fn update_self() -> Result<()> {
     use std::process::Command as Cmd;
 
-    let repo = "https://github.com/AngryTux/orchestrator.git";
+    let current_version = env!("CARGO_PKG_VERSION");
+    let api_url = "https://api.github.com/repos/AngryTux/orchestrator/releases/latest";
     let install_dir = format!("{}/.local/bin", std::env::var("HOME")?);
 
-    println!("→ Updating orchestrator...");
+    // 1. Check latest release
+    println!("→ Checking for updates...");
+    let output = Cmd::new("curl")
+        .args([
+            "-fsSL",
+            "-H",
+            "Accept: application/vnd.github.v3+json",
+            api_url,
+        ])
+        .output()?;
 
-    // Clone to temp dir
+    if !output.status.success() {
+        return Err(anyhow!("failed to check for updates (no releases found?)"));
+    }
+
+    let release: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    let latest_tag = release["tag_name"]
+        .as_str()
+        .ok_or_else(|| anyhow!("no tag_name in release"))?;
+    let latest_version = latest_tag.trim_start_matches('v');
+    let tarball_url = release["tarball_url"]
+        .as_str()
+        .ok_or_else(|| anyhow!("no tarball_url in release"))?;
+    let changelog = release["body"].as_str().unwrap_or("No release notes.");
+
+    // 2. Compare versions
+    if latest_version == current_version {
+        println!("✓ Already up to date (v{current_version})");
+        return Ok(());
+    }
+
+    println!("  Current: v{current_version}");
+    println!("  Latest:  {latest_tag}");
+    println!();
+
+    // 3. Show changelog
+    header("Changelog");
+    divider();
+    println!("{changelog}");
+    divider();
+    println!();
+
+    // 4. Download source tarball (not git clone — lighter, versioned)
+    println!("→ Downloading {latest_tag}...");
     let tmp = std::env::temp_dir().join(format!("orch-update-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&tmp);
+    std::fs::create_dir_all(&tmp)?;
 
-    let status = Cmd::new("git")
-        .args(["clone", "--depth", "1", repo])
-        .arg(&tmp)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
+    let tarball = tmp.join("source.tar.gz");
+    let status = Cmd::new("curl")
+        .args(["-fsSL", "-o"])
+        .arg(&tarball)
+        .arg(tarball_url)
         .status()?;
     if !status.success() {
         let _ = std::fs::remove_dir_all(&tmp);
-        return Err(anyhow!("failed to download source"));
+        return Err(anyhow!("failed to download release tarball"));
+    }
+
+    // Extract
+    let status = Cmd::new("tar")
+        .args(["xzf"])
+        .arg(&tarball)
+        .arg("-C")
+        .arg(&tmp)
+        .arg("--strip-components=1")
+        .status()?;
+    if !status.success() {
+        let _ = std::fs::remove_dir_all(&tmp);
+        return Err(anyhow!("failed to extract tarball"));
     }
     println!("✓ Source downloaded");
 
-    // Build
-    println!("→ Building...");
+    // 5. Backup current binaries
+    let dst_daemon = format!("{install_dir}/orchestratord");
+    let dst_cli = format!("{install_dir}/orch");
+
+    if std::path::Path::new(&dst_daemon).exists() {
+        let _ = std::fs::copy(&dst_daemon, format!("{dst_daemon}.bak"));
+    }
+    if std::path::Path::new(&dst_cli).exists() {
+        let _ = std::fs::copy(&dst_cli, format!("{dst_cli}.bak"));
+    }
+
+    // 6. Build
+    println!("→ Building {latest_tag}...");
     let status = Cmd::new("cargo")
         .args(["build", "--release"])
         .current_dir(&tmp)
         .status()?;
     if !status.success() {
+        // Restore backup
+        let _ = std::fs::copy(format!("{dst_daemon}.bak"), &dst_daemon);
+        let _ = std::fs::copy(format!("{dst_cli}.bak"), &dst_cli);
         let _ = std::fs::remove_dir_all(&tmp);
-        return Err(anyhow!("build failed"));
+        return Err(anyhow!("build failed — previous version restored"));
     }
     println!("✓ Build complete");
 
-    // Install
+    // 7. Install (atomic rename)
     let src_daemon = tmp.join("target/release/orchestratord");
     let src_cli = tmp.join("target/release/orch");
-    let dst_daemon = format!("{install_dir}/orchestratord");
-    let dst_cli = format!("{install_dir}/orch");
-
     std::fs::copy(&src_daemon, &dst_daemon)?;
     std::fs::copy(&src_cli, &dst_cli)?;
-    println!("✓ Binaries installed to {install_dir}");
 
-    // Restart daemon if systemd is available
+    // Cleanup backups
+    let _ = std::fs::remove_file(format!("{dst_daemon}.bak"));
+    let _ = std::fs::remove_file(format!("{dst_cli}.bak"));
+    println!("✓ Binaries installed");
+
+    // 8. Restart daemon
     let restart = Cmd::new("systemctl")
         .args(["--user", "restart", "orchestratord.socket"])
         .status();
@@ -476,14 +547,8 @@ fn update_self() -> Result<()> {
     // Cleanup
     let _ = std::fs::remove_dir_all(&tmp);
 
-    // Show new version
-    let version = Cmd::new(&dst_cli)
-        .args(["--version"])
-        .output()
-        .ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .unwrap_or_else(|| "unknown".into());
-    println!("\n✓ Updated to {}", version.trim());
+    println!();
+    println!("✓ Updated to {latest_tag}");
 
     Ok(())
 }

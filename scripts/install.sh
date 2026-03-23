@@ -98,7 +98,15 @@ check_deps() {
         fail "Missing dependencies:$missing. Install cargo via https://rustup.rs"
     fi
 
-    ok "Dependencies found (git, cargo)"
+    if ! command -v curl >/dev/null 2>&1; then
+        missing="$missing curl"
+    fi
+
+    if ! command -v tar >/dev/null 2>&1; then
+        missing="$missing tar"
+    fi
+
+    ok "Dependencies found (git, cargo, curl, tar)"
 }
 
 # ─── Check previous installation ────────────────────────
@@ -109,12 +117,41 @@ check_previous_install() {
     fi
 }
 
+# ─── Resolve version ─────────────────────────────────────
+resolve_version() {
+    info "Checking latest release..."
+    RELEASE_JSON=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null || echo "")
+
+    if [ -n "$RELEASE_JSON" ] && echo "$RELEASE_JSON" | grep -q "tag_name"; then
+        RESOLVED_VERSION=$(echo "$RELEASE_JSON" | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
+        TARBALL_URL=$(echo "$RELEASE_JSON" | grep '"tarball_url"' | head -1 | sed 's/.*"tarball_url": *"\([^"]*\)".*/\1/')
+        ok "Latest release: $RESOLVED_VERSION"
+    else
+        warn "No release found — using main branch"
+        RESOLVED_VERSION="main"
+        TARBALL_URL=""
+    fi
+}
+
 # ─── Download source ─────────────────────────────────────
 download_source() {
     BUILD_DIR=$(mktemp -d)
     trap 'rm -rf "$BUILD_DIR"' EXIT
 
-    spin "Downloading source..." git clone --depth 1 "$REPO_URL.git" "$BUILD_DIR/orchestrator"
+    if [ -n "$TARBALL_URL" ]; then
+        # Download release tarball (lighter than git clone)
+        spin "Downloading $RESOLVED_VERSION..." \
+            curl -fsSL -o "$BUILD_DIR/source.tar.gz" "$TARBALL_URL"
+        mkdir -p "$BUILD_DIR/orchestrator"
+        tar xzf "$BUILD_DIR/source.tar.gz" -C "$BUILD_DIR/orchestrator" --strip-components=1 \
+            || fail "Failed to extract tarball"
+    else
+        # Fallback: git clone main
+        spin "Downloading source..." \
+            git clone --depth 1 "$REPO_URL.git" "$BUILD_DIR/orchestrator"
+    fi
+
     [ -d "$BUILD_DIR/orchestrator" ] || fail "Download failed"
 }
 
@@ -252,31 +289,35 @@ check_deps
 check_previous_install
 echo ""
 
-echo "=== Step 3: Download ==="
+echo "=== Step 3: Version ==="
+resolve_version
+echo ""
+
+echo "=== Step 4: Download ==="
 download_source
 echo ""
 
-echo "=== Step 4: Build ==="
+echo "=== Step 5: Build ==="
 build_release
 echo ""
 
-echo "=== Step 5: Install ==="
+echo "=== Step 6: Install ==="
 install_binaries
 create_dirs
 install_repertoire
 echo ""
 
-echo "=== Step 6: systemd ==="
+echo "=== Step 7: systemd ==="
 install_systemd
 echo ""
 
-echo "=== Step 7: Verify ==="
+echo "=== Step 8: Verify ==="
 verify_install
 echo ""
 
 cat << EOF
 ╔══════════════════════════════════════════╗
-║   Orchestrator installed (v$VERSION)        ║
+║   Orchestrator installed ($RESOLVED_VERSION)     ║
 ╚══════════════════════════════════════════╝
 
   Get started:
